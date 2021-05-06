@@ -1,5 +1,7 @@
 package main
 
+import "net/http"
+
 type Conta struct {
 	ID         int    `json:"id,omitempty"`
 	Name       string `json:"name,omitempty"`
@@ -16,10 +18,10 @@ type ArmazenamentoDeContas struct {
 type MetodosDeArmazenamento interface {
 	ObterContas() []Conta
 	MostrarSaldo(string) int
-	AdicionaConta(string)
-	CriarConta(string, string, string) []Conta
+	CriarConta(string, string, string)
 }
 
 type ServidorConta struct {
 	armazenamento MetodosDeArmazenamento
+	http.Handler
 }
