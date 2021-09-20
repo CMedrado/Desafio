@@ -1,0 +1,1007 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.7.3"
+    },
+    "toc": {
+      "base_numbering": 1,
+      "nav_menu": {},
+      "number_sections": true,
+      "sideBar": true,
+      "skip_h1_title": false,
+      "title_cell": "Table of Contents",
+      "title_sidebar": "Contents",
+      "toc_cell": false,
+      "toc_position": {},
+      "toc_section_display": true,
+      "toc_window_display": false
+    },
+    "colab": {
+      "name": "03_Classificação_de_Texto.ipynb",
+      "provenance": [],
+      "collapsed_sections": [],
+      "toc_visible": true,
+      "include_colab_link": true
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/CMedrado/Desafio/blob/main/Atividade%20Ass%C3%ADncrona%20em%20dupla%204%20\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "YHZA93r5ZWkv"
+      },
+      "source": [
+        "# Classificação de Texto\n",
+        "\n",
+        "Exemplo de classificação de texto com pipeline de NLP e classificador no final"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Nx_2ZKqmZWk3"
+      },
+      "source": [
+        "import nltk\n",
+        "from nltk.tokenize import word_tokenize\n",
+        "from nltk.stem.snowball import SnowballStemmer\n",
+        "from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import matplotlib.pyplot as plt\n",
+        "%matplotlib inline\n",
+        "import warnings\n",
+        "warnings.simplefilter(\"ignore\")\n",
+        "\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.pipeline import Pipeline\n",
+        "from sklearn.neighbors import KNeighborsClassifier\n",
+        "from sklearn.metrics import accuracy_score\n",
+        "from sklearn.metrics import confusion_matrix\n",
+        "from sklearn.metrics import plot_confusion_matrix\n"
+      ],
+      "execution_count": 72,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "-sbOi1hdZWk7"
+      },
+      "source": [
+        "# Tokenização\n",
+        "def tokenize(text):\n",
+        "    # Tokenização\n",
+        "    tokens = nltk.word_tokenize(text)\n",
+        "    \n",
+        "    # Stemização\n",
+        "    stems  = []\n",
+        "    for item in tokens:\n",
+        "        stems.append(SnowballStemmer(\"english\").stem(item))\n",
+        "    return stems"
+      ],
+      "execution_count": 73,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "6zLolLTX0e_U",
+        "outputId": "41109f36-0a4b-4f2e-ca84-d0452703db15"
+      },
+      "source": [
+        "from google.colab import drive\n",
+        "drive.mount('/content/drive')"
+      ],
+      "execution_count": 74,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Drive already mounted at /content/drive; to attempt to forcibly remount, call drive.mount(\"/content/drive\", force_remount=True).\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "O2rgEUvzZWk9",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 914
+        },
+        "outputId": "a82646d5-d322-4a6b-97ee-cb21910e4385"
+      },
+      "source": [
+        "#df = pd.read_csv('Eclipse_total.csv')\n",
+        "\n",
+        "# Carregando os dados\n",
+        "df = pd.read_csv('/content/drive/My Drive/TP/eclipse/Case_Study/Case_Study/Eclipse_total.csv') # Salvamos com esse nome antes\n",
+        "\n",
+        "# Dataset\n",
+        "df.head(10)"
+      ],
+      "execution_count": 99,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>ID</th>\n",
+              "      <th>Product_Name</th>\n",
+              "      <th>Processed_Summary</th>\n",
+              "      <th>Processed_Description</th>\n",
+              "      <th>Component_Name</th>\n",
+              "      <th>Severity_Level</th>\n",
+              "      <th>Priority</th>\n",
+              "      <th>Assignee_Developers</th>\n",
+              "      <th>Topic_ID</th>\n",
+              "      <th>Status</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>221036</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>unabl enter request parti code cq</td>\n",
+              "      <td>report enter request parti librari submit java...</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>bjorn.freeman-benson</td>\n",
+              "      <td>d_a_carver bjorn.freeman-benson karl.matthias</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>221203</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>submit request cq cq submit</td>\n",
+              "      <td>submit request cq cq submit creat screen retur...</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>bjorn.freeman-benson</td>\n",
+              "      <td>d_a_carver d_a_carver bjorn.freeman-benson kar...</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>243952</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>ca submit cq rd parti contribut develop apach</td>\n",
+              "      <td>valid apach url enter url project page apach p...</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>bjorn.freeman-benson</td>\n",
+              "      <td>ekuleshov ekuleshov bjorn.freeman-benson ekule...</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>230229</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>tool link fail ie</td>\n",
+              "      <td>webmast email tool link respond js error error...</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>gabe.obrien</td>\n",
+              "      <td>webmaster webmaster bjorn.freeman-benson karl....</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>229095</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>cron total broken</td>\n",
+              "      <td>portal cron job broken friday gabe debug fix c...</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>karl.matthias karl.matthias karl.matthias karl...</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>5</th>\n",
+              "      <td>109230</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>gener roadmap project inform file</td>\n",
+              "      <td>xslt css gener roadmap eclipse project info xm...</td>\n",
+              "      <td>Process</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>eromero</td>\n",
+              "      <td>bjorn.freeman-benson techtonik bjorn.freeman-b...</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>6</th>\n",
+              "      <td>275926</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>cq for record blow address charact</td>\n",
+              "      <td>appear addslash stripslash appli properli case...</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>karl.matthias karl.matthias karl.matthias</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>7</th>\n",
+              "      <td>208204</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>javascript error submit cq</td>\n",
+              "      <td>submit request refer distribut third parti cod...</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>gabe.obrien</td>\n",
+              "      <td>aldo_eisma bjorn.freeman-benson gabe.obrien ka...</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>8</th>\n",
+              "      <td>229830</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>alexey pavlov nomin email address</td>\n",
+              "      <td>portal allow nomin miss email address fix</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>karl.matthias bjorn.freeman-benson karl.matthi...</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>9</th>\n",
+              "      <td>191261</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>role upload imag inconsist role edit web page</td>\n",
+              "      <td>request design peopl role updat organ websit m...</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>donald.smith donald.smith bjorn.freeman-benson...</td>\n",
+              "      <td>FIXED</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "       ID  ... Status\n",
+              "0  221036  ...  FIXED\n",
+              "1  221203  ...  FIXED\n",
+              "2  243952  ...  FIXED\n",
+              "3  230229  ...  FIXED\n",
+              "4  229095  ...  FIXED\n",
+              "5  109230  ...  FIXED\n",
+              "6  275926  ...  FIXED\n",
+              "7  208204  ...  FIXED\n",
+              "8  229830  ...  FIXED\n",
+              "9  191261  ...  FIXED\n",
+              "\n",
+              "[10 rows x 10 columns]"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 99
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "vjKFYlSFfKTP",
+        "outputId": "95c4d465-0b75-4981-cb60-074da7e90238"
+      },
+      "source": [
+        "class_names = df['Status'].unique()\n",
+        "class_names"
+      ],
+      "execution_count": 76,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array(['FIXED', nan], dtype=object)"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 76
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "8ooYAftkrcu8"
+      },
+      "source": [
+        "Já possui apenas Fixed.\n",
+        "Tirando os casos de Severity Level que são normal\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 914
+        },
+        "id": "A60wceSIr-jT",
+        "outputId": "cdcc543c-dad8-4ef7-8a25-03b42cbd66c0"
+      },
+      "source": [
+        "# Removendo valores\n",
+        "df = df[df.Severity_Level != \"normal\"]\n",
+        "\n",
+        "# Apresentando dataset\n",
+        "df.head(10)"
+      ],
+      "execution_count": 87,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>ID</th>\n",
+              "      <th>Product_Name</th>\n",
+              "      <th>Component_Name</th>\n",
+              "      <th>Severity_Level</th>\n",
+              "      <th>Priority</th>\n",
+              "      <th>Assignee_Developers</th>\n",
+              "      <th>Topic_ID</th>\n",
+              "      <th>Status</th>\n",
+              "      <th>Processed_Description_Processed_Summary</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>221036</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>bjorn.freeman-benson</td>\n",
+              "      <td>d_a_carver bjorn.freeman-benson karl.matthias</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>report enter request parti librari submit java...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>221203</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>bjorn.freeman-benson</td>\n",
+              "      <td>d_a_carver d_a_carver bjorn.freeman-benson kar...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>submit request cq cq submit creat screen retur...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>243952</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>bjorn.freeman-benson</td>\n",
+              "      <td>ekuleshov ekuleshov bjorn.freeman-benson ekule...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>valid apach url enter url project page apach p...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>230229</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>gabe.obrien</td>\n",
+              "      <td>webmaster webmaster bjorn.freeman-benson karl....</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>webmast email tool link respond js error error...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>229095</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>karl.matthias karl.matthias karl.matthias karl...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>portal cron job broken friday gabe debug fix c...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>5</th>\n",
+              "      <td>109230</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Process</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>eromero</td>\n",
+              "      <td>bjorn.freeman-benson techtonik bjorn.freeman-b...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>xslt css gener roadmap eclipse project info xm...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>6</th>\n",
+              "      <td>275926</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>karl.matthias karl.matthias karl.matthias</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>appear addslash stripslash appli properli case...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>7</th>\n",
+              "      <td>208204</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>gabe.obrien</td>\n",
+              "      <td>aldo_eisma bjorn.freeman-benson gabe.obrien ka...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>submit request refer distribut third parti cod...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>8</th>\n",
+              "      <td>229830</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>karl.matthias bjorn.freeman-benson karl.matthi...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>portal allow nomin miss email address fix alex...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>9</th>\n",
+              "      <td>191261</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>donald.smith donald.smith bjorn.freeman-benson...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>request design peopl role updat organ websit m...</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "       ID  ...            Processed_Description_Processed_Summary\n",
+              "0  221036  ...  report enter request parti librari submit java...\n",
+              "1  221203  ...  submit request cq cq submit creat screen retur...\n",
+              "2  243952  ...  valid apach url enter url project page apach p...\n",
+              "3  230229  ...  webmast email tool link respond js error error...\n",
+              "4  229095  ...  portal cron job broken friday gabe debug fix c...\n",
+              "5  109230  ...  xslt css gener roadmap eclipse project info xm...\n",
+              "6  275926  ...  appear addslash stripslash appli properli case...\n",
+              "7  208204  ...  submit request refer distribut third parti cod...\n",
+              "8  229830  ...  portal allow nomin miss email address fix alex...\n",
+              "9  191261  ...  request design peopl role updat organ websit m...\n",
+              "\n",
+              "[10 rows x 9 columns]"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 87
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "h-YqvhBUte7d"
+      },
+      "source": [
+        "Juntando as listas Processed_Description\te Processed_Summary\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 525
+        },
+        "id": "JYVaHqQhtoB8",
+        "outputId": "07b19973-e6fc-4432-a1f9-1f70afa1b7a8"
+      },
+      "source": [
+        "df[\"processed\"] = df[\"Processed_Description\"]+df[\"Processed_Summary\"]\n",
+        "df.drop(\"Processed_Description\", inplace=True, axis=1)\n",
+        "df.drop(\"Processed_Summary\", inplace=True, axis=1)\n",
+        "df = df.dropna()\n",
+        "df.head(10)"
+      ],
+      "execution_count": 100,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>ID</th>\n",
+              "      <th>Product_Name</th>\n",
+              "      <th>Component_Name</th>\n",
+              "      <th>Severity_Level</th>\n",
+              "      <th>Priority</th>\n",
+              "      <th>Assignee_Developers</th>\n",
+              "      <th>Topic_ID</th>\n",
+              "      <th>Status</th>\n",
+              "      <th>processed</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>221036</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>bjorn.freeman-benson</td>\n",
+              "      <td>d_a_carver bjorn.freeman-benson karl.matthias</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>report enter request parti librari submit java...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>221203</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>bjorn.freeman-benson</td>\n",
+              "      <td>d_a_carver d_a_carver bjorn.freeman-benson kar...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>submit request cq cq submit creat screen retur...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>243952</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>bjorn.freeman-benson</td>\n",
+              "      <td>ekuleshov ekuleshov bjorn.freeman-benson ekule...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>valid apach url enter url project page apach p...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>230229</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>gabe.obrien</td>\n",
+              "      <td>webmaster webmaster bjorn.freeman-benson karl....</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>webmast email tool link respond js error error...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>229095</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>blocker</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>karl.matthias karl.matthias karl.matthias karl...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>portal cron job broken friday gabe debug fix c...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>5</th>\n",
+              "      <td>109230</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Process</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>eromero</td>\n",
+              "      <td>bjorn.freeman-benson techtonik bjorn.freeman-b...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>xslt css gener roadmap eclipse project info xm...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>6</th>\n",
+              "      <td>275926</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>karl.matthias karl.matthias karl.matthias</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>appear addslash stripslash appli properli case...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>7</th>\n",
+              "      <td>208204</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>gabe.obrien</td>\n",
+              "      <td>aldo_eisma bjorn.freeman-benson gabe.obrien ka...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>submit request refer distribut third parti cod...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>8</th>\n",
+              "      <td>229830</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>karl.matthias bjorn.freeman-benson karl.matthi...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>portal allow nomin miss email address fix alex...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>9</th>\n",
+              "      <td>191261</td>\n",
+              "      <td>Community</td>\n",
+              "      <td>Project Management &amp; Portal</td>\n",
+              "      <td>critical</td>\n",
+              "      <td>P1</td>\n",
+              "      <td>portal-inbox</td>\n",
+              "      <td>donald.smith donald.smith bjorn.freeman-benson...</td>\n",
+              "      <td>FIXED</td>\n",
+              "      <td>request design peopl role updat organ websit m...</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "       ID  ...                                          processed\n",
+              "0  221036  ...  report enter request parti librari submit java...\n",
+              "1  221203  ...  submit request cq cq submit creat screen retur...\n",
+              "2  243952  ...  valid apach url enter url project page apach p...\n",
+              "3  230229  ...  webmast email tool link respond js error error...\n",
+              "4  229095  ...  portal cron job broken friday gabe debug fix c...\n",
+              "5  109230  ...  xslt css gener roadmap eclipse project info xm...\n",
+              "6  275926  ...  appear addslash stripslash appli properli case...\n",
+              "7  208204  ...  submit request refer distribut third parti cod...\n",
+              "8  229830  ...  portal allow nomin miss email address fix alex...\n",
+              "9  191261  ...  request design peopl role updat organ websit m...\n",
+              "\n",
+              "[10 rows x 9 columns]"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 100
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ZU8olx_TZWlA",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "5b6cc996-d207-4785-d0a9-9e1279634702"
+      },
+      "source": [
+        "# Split Dataset\n",
+        "X_train, X_test, y_train, y_test = train_test_split(df[['processed']], df.Severity_Level, random_state=42)\n",
+        "X_train.shape"
+      ],
+      "execution_count": 101,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "(30876, 1)"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 101
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "KrHj_VyjZWlC",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "5185c26b-4a5d-47e3-b127-21e7003e1f8e"
+      },
+      "source": [
+        "# Stop Words\n",
+        "\n",
+        "nltk.download('stopwords')\n",
+        "\n",
+        "nltk.download('punkt')\n",
+        "\n",
+        "stop_words = nltk.corpus.stopwords.words('portuguese')\n",
+        "\n",
+        "# NLP Pipeline\n",
+        "text_clf   = Pipeline([\n",
+        "                # Vectorize\n",
+        "                ('vect',  TfidfVectorizer(tokenizer=tokenize, \n",
+        "                                          stop_words=stop_words, \n",
+        "                                          ngram_range=(1,1))),\n",
+        "                # Classificador\n",
+        "                ('clf',   KNeighborsClassifier(n_jobs=-1)),\n",
+        "            ])\n",
+        "\n",
+        "# Train\n",
+        "text_clf = text_clf.fit(X_train.processed, y_train)"
+      ],
+      "execution_count": 102,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[nltk_data] Downloading package stopwords to /root/nltk_data...\n",
+            "[nltk_data]   Package stopwords is already up-to-date!\n",
+            "[nltk_data] Downloading package punkt to /root/nltk_data...\n",
+            "[nltk_data]   Package punkt is already up-to-date!\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "39y6FF1gZWlE",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "b1e345ef-44c5-4b7f-d4fe-69f979c09f77"
+      },
+      "source": [
+        "# Evaluate\n",
+        "text_clf.score(X_test.processed, y_test)"
+      ],
+      "execution_count": 103,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "0.6778393082677547"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 103
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "0EjKaY2zZWlG"
+      },
+      "source": [
+        "\n",
+        "predictions = text_clf.predict(X_test.processed)\n",
+        "\n",
+        "conf_matrix = confusion_matrix(y_test, predictions)"
+      ],
+      "execution_count": 104,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "NuKTCrP8ZWlH",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 597
+        },
+        "outputId": "db2da5bb-7724-4a3f-8150-b8afb17ba865"
+      },
+      "source": [
+        "plt.figure(figsize=(10,10))\n",
+        "plt.xticks(np.arange(len(text_clf.classes_)),text_clf.classes_)\n",
+        "plt.yticks(np.arange(len(text_clf.classes_)),text_clf.classes_)\n",
+        "plt.imshow(conf_matrix,cmap=plt.cm.Blues)\n",
+        "plt.colorbar()"
+      ],
+      "execution_count": 105,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "<matplotlib.colorbar.Colorbar at 0x7ffa0a9eaf90>"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 105
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "image/png": "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\n",
+            "text/plain": [
+              "<Figure size 720x720 with 2 Axes>"
+            ]
+          },
+          "metadata": {
+            "needs_background": "light"
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "2SjzDogP29Wt",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "68862374-891c-4b8e-a0fe-34bd61185418"
+      },
+      "source": [
+        "# Predict\n",
+        "\n",
+        "text = \"Alimentos naturais fazem bem ao corpo\" #Documento novo nao utilizado no treinamento\n",
+        "\n",
+        "text_clf.predict([text])"
+      ],
+      "execution_count": 106,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array(['enhancement'], dtype=object)"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 106
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "qU-PSNX4ZWlL",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "93c68b04-0f69-4bac-bac4-aa479f34dcf0"
+      },
+      "source": [
+        "# Predict\n",
+        "\n",
+        "text = \"Filme 'Star Wars: Os Últimos Jedi'\"\n",
+        "\n",
+        "text_clf.predict([text])"
+      ],
+      "execution_count": 107,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array(['normal'], dtype=object)"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 107
+        }
+      ]
+    }
+  ]
+}
